@@ -45,7 +45,7 @@ public class MainActivity extends AppCompatActivity {
         faniv=findViewById(R.id.ifan);
         bulbiv=findViewById(R.id.ibulb);
 
-        doRequest("get");
+        doGet();
 
         faniv.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -54,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
                     fansw.setChecked(false);
                 else
                     fansw.setChecked(true);
-                switchHandler(null);
+                doPost(v);
             }
         });
 
@@ -65,124 +65,110 @@ public class MainActivity extends AppCompatActivity {
                     bulbsw.setChecked(false);
                 else
                     bulbsw.setChecked(true);
-                switchHandler(null);
+                doPost(v);
             }
         });
 
         update.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                doRequest("get");
+                doGet();
             }
         });
 
     }
 
-    public void switchHandler(View v)
+    public void doGet()
     {
-        doRequest("post");
-        try {
-            TimeUnit.MILLISECONDS.sleep(200);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        doRequest("get");
+        RequestQueue getQueue = Volley.newRequestQueue(this);
+        String url = "http://kloud.cf/getStatus.php";
+        StringRequest getRequest = new StringRequest(Request.Method.POST, url,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        String[] status = response.split("/");
+                        float tmp = Float.parseFloat(status[2]);
+                        temptv.setText(String.valueOf(tmp) + " C\nLast Updated\n" + status[3]);
+
+                        if (Float.parseFloat(status[0]) == 1) {
+                            fantv.setText("Fan Is On!");
+                            fantv.setTextColor(getResources().getColor(R.color.colorskyblue));
+                            fansw.setChecked(true);
+                        } else {
+                            fantv.setText("Fan Is Off!");
+                            fantv.setTextColor(getResources().getColor(R.color.colorred));
+                            fansw.setChecked(false);
+                        }
+                        if (Float.parseFloat(status[1]) == 1) {
+                            bulbtv.setText("Bulb Is On!");
+                            bulbtv.setTextColor(getResources().getColor(R.color.colorskyblue));
+                            bulbsw.setChecked(true);
+                        } else {
+                            bulbtv.setText("Bulb Is Off!");
+                            bulbtv.setTextColor(getResources().getColor(R.color.colorred));
+                            bulbsw.setChecked(false);
+                        }
+                    }
+                },
+                new Response.ErrorListener()
+                {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        // error
+                        //Log.d("Error.Response", response);
+                    }
+                }
+                ) {
+            @Override
+            protected Map<String, String> getParams()
+            {
+                Map<String, String>  params = new HashMap<String, String>();
+                return params;
+            }
+        };
+        getQueue.add(getRequest);
     }
 
-    public void doRequest(String operation){
 
-
-        RequestQueue queue = Volley.newRequestQueue(this);
-        if(operation.equals("get")) {
-            String url = "http://kloud.cf/getStatus.php";
-            StringRequest postRequest = new StringRequest(Request.Method.POST, url,
-                    new Response.Listener<String>()
-                    {
-                        @Override
-                        public void onResponse(String response) {
-                            String[] status=response.split("/");
-                            float tmp=Float.parseFloat(status[2]);
-                            temptv.setText(String.valueOf(tmp)+" C\nLast Updated\n"+status[3]);
-
-                            if(Float.parseFloat(status[0])==1){
-                                fantv.setText("Fan Is On!");
-                                fantv.setTextColor(getResources().getColor(R.color.colorskyblue));
-                                fansw.setChecked(true);
-                            }
-                            else
-                            {
-                                fantv.setText("Fan Is Off!");
-                                fantv.setTextColor(getResources().getColor(R.color.colorred));
-                                fansw.setChecked(false);
-                            }
-                            if(Float.parseFloat(status[1])==1){
-                                bulbtv.setText("Bulb Is On!");
-                                bulbtv.setTextColor(getResources().getColor(R.color.colorskyblue));
-                                bulbsw.setChecked(true);
-                            }
-                            else
-                            {
-                                bulbtv.setText("Bulb Is Off!");
-                                bulbtv.setTextColor(getResources().getColor(R.color.colorred));
-                                bulbsw.setChecked(false);
-                            }
-                        }
-                    },
-                    new Response.ErrorListener()
-                    {
-                        @Override
-                        public void onErrorResponse(VolleyError error) {
-                            // error
-                            //Log.d("Error.Response", response);
-                        }
+    public void doPost(View view) {
+        RequestQueue postQueue = Volley.newRequestQueue(this);
+        String url = "http://kloud.cf/postStatus.php";
+        StringRequest postRequest = new StringRequest(Request.Method.POST, url,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
                     }
-            ) {
-                @Override
-                protected Map<String, String> getParams()
-                {
-                    Map<String, String>  params = new HashMap<String, String>();
-                    return params;
-                }
-            };
-            queue.add(postRequest);
-        }
-
-        else
-        {
-            String url = "http://kloud.cf/postStatus.php";
-            StringRequest postRequest = new StringRequest(Request.Method.POST, url,
-                    new Response.Listener<String>()
-                    {
-                        @Override
-                        public void onResponse(String response) {
-                        }
-                    },
-                    new Response.ErrorListener()
-                    {
-                        @Override
-                        public void onErrorResponse(VolleyError error) {
-                            // error
-                            //Log.d("Error.Response", response);
-                        }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        // error
+                        //Log.d("Error.Response", response);
                     }
-            ) {
-                @Override
-                protected Map<String, String> getParams()
-                {
-                    Map<String, String>  params = new HashMap<String, String>();
-                    if(fansw.isChecked())
-                        params.put("fan", "1");
-                    else
-                        params.put("fan", "0");
-                    if(bulbsw.isChecked())
-                        params.put("bulb","1");
-                    else
-                        params.put("bulb", "0");
-
-                    return params;
                 }
-            };
-            queue.add(postRequest);
-        }
+        ) {
+            @Override
+            protected Map<String, String> getParams() {
+                Map<String, String> params = new HashMap<String, String>();
+                if (fansw.isChecked())
+                    params.put("fan", "1");
+                else
+                    params.put("fan", "0");
+                if (bulbsw.isChecked())
+                    params.put("bulb", "1");
+                else
+                    params.put("bulb", "0");
+
+                return params;
+            }
+        };
+        postQueue.add(postRequest);
+        postQueue.addRequestFinishedListener(new RequestQueue.RequestFinishedListener<StringRequest>() {
+            @Override
+            public void onRequestFinished(Request<StringRequest> request) {
+                doGet();
+            }
+        });
+
     }
 }
