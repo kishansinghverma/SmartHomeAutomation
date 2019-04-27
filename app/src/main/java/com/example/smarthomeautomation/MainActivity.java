@@ -2,24 +2,22 @@ package com.example.smarthomeautomation;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.graphics.Color;
 import android.os.Build;
+import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.support.annotation.NonNull;
 import android.support.annotation.RequiresApi;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-import android.widget.RadioGroup;
 import android.widget.Switch;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -35,7 +33,6 @@ import com.google.firebase.database.ValueEventListener;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -54,6 +51,8 @@ public class MainActivity extends AppCompatActivity {
     FirebaseDatabase database;
     Button update;
 
+    CountDownTimer countDownTimer;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -70,7 +69,24 @@ public class MainActivity extends AppCompatActivity {
         progressBar=findViewById(R.id.progressBar);
         linearLayout=findViewById(R.id.linearLayout);
 
+        countDownTimer=new CountDownTimer(8000, 1000) {
+            @Override
+            public void onTick(long millisUntilFinished) {}
+
+            @Override
+            public void onFinish() {
+                Snackbar.make(linearLayout, "Error : Unstable Internet Connection!!", Snackbar.LENGTH_INDEFINITE).setAction("Retry", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        updateDHT();
+                    }
+                }).show();
+                progressBar.setVisibility(View.GONE);
+            }
+        };
+
         initialize();
+
 
         database=FirebaseDatabase.getInstance();
         DatabaseReference smoke=database.getReference("smoke");
@@ -121,7 +137,6 @@ public class MainActivity extends AppCompatActivity {
         update.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                progressBar.setVisibility(View.VISIBLE);
                 updateDHT();
             }
         });
@@ -129,12 +144,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateDHT() {
-        RequestQueue getQueue = Volley.newRequestQueue(this);
+        countDownTimer.start();
+        progressBar.setVisibility(View.VISIBLE);
+        final RequestQueue getQueue = Volley.newRequestQueue(this);
         String url = "https://erratic-porcupine-6148.dataplicity.io/cgi-bin/get_temp.py";
-        StringRequest getRequest = new StringRequest(Request.Method.POST, url,
+        StringRequest getRequest = new StringRequest(Request.Method.GET, url,
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
+                        countDownTimer.cancel();
                         try {
                             progressBar.setVisibility(View.GONE);
                             String[] status = response.trim().split("/");
@@ -144,7 +162,12 @@ public class MainActivity extends AppCompatActivity {
                         }
                         catch (Exception e)
                         {
-                            Toast.makeText(MainActivity.this, "Connection Failed!!", Toast.LENGTH_SHORT).show();
+                            Snackbar.make(linearLayout, "Error : Server Might Be Down!!", Snackbar.LENGTH_LONG).setAction("Retry", new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    updateDHT();
+                                }
+                            }).setActionTextColor(getResources().getColor(R.color.colorylo)).show();
                         }
                     }
                 },
@@ -164,16 +187,43 @@ public class MainActivity extends AppCompatActivity {
                 return params;
             }
         };
+        getRequest.setTag("requests");
         getQueue.add(getRequest);
+        new CountDownTimer(8000, 1000)
+        {
+
+            @Override
+            public void onTick(long millisUntilFinished) {}
+
+            @Override
+            public void onFinish() {
+                getQueue.cancelAll("requests");
+            }
+        }.start();
     }
 
     private void initialize() {
-        RequestQueue getQueue = Volley.newRequestQueue(this);
+        final CountDownTimer timer=new CountDownTimer(8000, 1000) {
+            @Override
+            public void onTick(long millisUntilFinished) {}
+
+            @Override
+            public void onFinish() {
+                Snackbar.make(linearLayout, "Error : Unstable Internet Connection!!", Snackbar.LENGTH_INDEFINITE).setAction("Retry", new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        initialize();
+                    }
+                }).setActionTextColor(getResources().getColor(R.color.colorylo)).show();
+            }
+        }.start();
+        final RequestQueue getQueue = Volley.newRequestQueue(this);
         String url = "https://erratic-porcupine-6148.dataplicity.io/cgi-bin/get_data.py";
-        StringRequest getRequest = new StringRequest(Request.Method.POST, url,
+        final StringRequest getRequest = new StringRequest(Request.Method.GET, url,
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
+                        timer.cancel();
                         try {
                             String[] status = response.trim().split("/");
                             float tmp = Float.parseFloat(status[2]);
@@ -209,7 +259,15 @@ public class MainActivity extends AppCompatActivity {
                             }
                         }
                         catch (Exception e) {
-                            Toast.makeText(MainActivity.this, "Connection Failed!!", Toast.LENGTH_SHORT).show();
+                            Snackbar.make(linearLayout, "Error : Server Might Be Down!!", Snackbar.LENGTH_INDEFINITE)
+                                    .setAction("Retry", new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            initialize();
+                                        }
+                                    })
+                                    .setActionTextColor(getResources().getColor(R.color.colorylo))
+                                    .show();
                         }
                     }
                 },
@@ -229,17 +287,47 @@ public class MainActivity extends AppCompatActivity {
                 return params;
             }
         };
+        getRequest.setTag("requests");
         getQueue.add(getRequest);
+
+        new CountDownTimer(8000, 1000){
+
+            @Override
+            public void onTick(long millisUntilFinished) {}
+
+            @Override
+            public void onFinish() {
+                getQueue.cancelAll("requests");
+            }
+        }.start();
     }
 
     public void fanUpdate(View v)
     {
-        RequestQueue getQueue = Volley.newRequestQueue(this);
+        final CountDownTimer timer=new CountDownTimer(5000,1000) {
+            @Override
+            public void onTick(long millisUntilFinished) {}
+
+            @Override
+            public void onFinish() {
+                Snackbar.make(linearLayout, "Error : Unstable Internet Connection!!", Snackbar.LENGTH_LONG)
+                        .setAction("Retry", new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                fanUpdate(linearLayout);
+                            }
+                        })
+                        .setActionTextColor(getResources().getColor(R.color.colorylo))
+                        .show();
+            }
+        }.start();
+        final RequestQueue getQueue = Volley.newRequestQueue(this);
         String url = "https://erratic-porcupine-6148.dataplicity.io/cgi-bin/fan_handler.py";
         StringRequest getRequest = new StringRequest(Request.Method.POST, url,
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
+                        timer.cancel();
                      if(response.trim().equals("0"))
                      {
                          fantv.setText("Fan Is Off!");
@@ -257,7 +345,15 @@ public class MainActivity extends AppCompatActivity {
                          (findViewById(R.id.gif)).setVisibility(View.VISIBLE);
                      }
                      else
-                         Toast.makeText(MainActivity.this, "Connection Failed!!", Toast.LENGTH_SHORT).show();
+                         Snackbar.make(linearLayout, "Error : Server Might Be Down!!", Snackbar.LENGTH_LONG)
+                                .setAction("Retry", new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View v) {
+                                        fanUpdate(linearLayout);
+                                    }
+                                })
+                                .setActionTextColor(getResources().getColor(R.color.colorylo))
+                                .show();
                     }
                 },
                 new Response.ErrorListener() {
@@ -276,18 +372,48 @@ public class MainActivity extends AppCompatActivity {
                 return params;
             }
         };
+        getRequest.setTag("requests");
         getQueue.add(getRequest);
+        new CountDownTimer(5000,1000)
+        {
 
+            @Override
+            public void onTick(long millisUntilFinished) {}
+
+            @Override
+            public void onFinish() {
+                getQueue.cancelAll("requests");
+            }
+        }.start();
     }
 
     public void bulbUpdate(View v)
     {
-        RequestQueue getQueue = Volley.newRequestQueue(this);
+        final CountDownTimer timer=new CountDownTimer(5000 ,1000) {
+            @Override
+            public void onTick(long millisUntilFinished) {}
+
+            @Override
+            public void onFinish() {
+                Snackbar.make(linearLayout, "Error : Unstable Internet Connection!!", Snackbar.LENGTH_LONG)
+                        .setAction("Retry", new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                bulbUpdate(linearLayout);
+                            }
+                        })
+                        .setActionTextColor(getResources().getColor(R.color.colorylo))
+                        .show();
+            }
+        }.start();
+        final RequestQueue getQueue = Volley.newRequestQueue(this);
         String url = "https://erratic-porcupine-6148.dataplicity.io/cgi-bin/bulb_handler.py";
         StringRequest getRequest = new StringRequest(Request.Method.POST, url,
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
+                        timer.cancel();
+
                         if(response.trim().equals("0"))
                         {
                             bulbtv.setText("Bulb Is Off!");
@@ -303,7 +429,15 @@ public class MainActivity extends AppCompatActivity {
                             bulbiv.setImageResource(R.drawable.bon);
                         }
                         else
-                            Toast.makeText(MainActivity.this, "Connection Failed!!", Toast.LENGTH_SHORT).show();
+                            Snackbar.make(linearLayout, "Error : Server Might Be Down!!", Snackbar.LENGTH_LONG)
+                                    .setAction("Retry", new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            bulbUpdate(linearLayout);
+                                        }
+                                    })
+                                    .setActionTextColor(getResources().getColor(R.color.colorylo))
+                                    .show();
                     }
                 },
                 new Response.ErrorListener() {
@@ -322,8 +456,19 @@ public class MainActivity extends AppCompatActivity {
                 return params;
             }
         };
+        getRequest.setTag("requests");
         getQueue.add(getRequest);
+        new CountDownTimer(5000, 1000)
+        {
 
+            @Override
+            public void onTick(long millisUntilFinished) {}
+
+            @Override
+            public void onFinish() {
+                getQueue.cancelAll("requests");
+            }
+        }.start();
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
