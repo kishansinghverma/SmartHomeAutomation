@@ -69,41 +69,48 @@ public class MainActivity extends AppCompatActivity {
         progressBar=findViewById(R.id.progressBar);
         linearLayout=findViewById(R.id.linearLayout);
 
-        countDownTimer=new CountDownTimer(8000, 1000) {
+        countDownTimer=new CountDownTimer(10000, 1000) {
             @Override
             public void onTick(long millisUntilFinished) {}
 
             @Override
             public void onFinish() {
-                Snackbar.make(linearLayout, "Error : Unstable Internet Connection!!", Snackbar.LENGTH_INDEFINITE).setAction("Retry", new View.OnClickListener() {
+                Snackbar.make(linearLayout, "Error : Unstable Internet Connection!!", Snackbar.LENGTH_INDEFINITE)
+                        .setAction("Retry", new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         updateDHT();
                     }
-                }).show();
+                })
+                        .setActionTextColor(getResources().getColor(R.color.colorylo))
+                        .show();
                 progressBar.setVisibility(View.GONE);
             }
         };
 
         initialize();
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            makeNotificationChannel("CHANNEL", "Priority Channel2", NotificationManager.IMPORTANCE_DEFAULT);
+        }
+
 
         database=FirebaseDatabase.getInstance();
-        DatabaseReference smoke=database.getReference("smoke");
-        smoke.addValueEventListener(new ValueEventListener() {
+        final NotificationCompat.Builder notification = new NotificationCompat.Builder(MainActivity.this, "CHANNEL");
+
+
+        final DatabaseReference water=database.getReference("water");
+        water.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    makeNotificationChannel("CHANNEL", "Priority Channel", NotificationManager.IMPORTANCE_DEFAULT);
-                }
-
-                NotificationCompat.Builder notification = new NotificationCompat.Builder(MainActivity.this, "CHANNEL_1");
-                notification.setSmallIcon(R.mipmap.ic_launcher);
+                notification.setSmallIcon(R.drawable.alert);
                 notification.setContentTitle("Alert!");
-                notification.setContentText("Smoke Detected In Your House!");
-
+                notification.setContentText("Water Tank Is Filled!");
                 NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-                notificationManager.notify(1, notification.build());
+                if(!dataSnapshot.getValue().toString().trim().equals("0"))
+                    notificationManager.notify(1, notification.build());
+                else
+                    notificationManager.cancel(1);
             }
 
             @Override
@@ -111,6 +118,27 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
+
+        final DatabaseReference smoke=database.getReference("smoke");
+        smoke.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                notification.setSmallIcon(R.drawable.critacal);
+                notification.setContentTitle("Alert!");
+                notification.setContentText("Smoke Detected In Your House!");
+                NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+                if(!dataSnapshot.getValue().toString().trim().equals("0"))
+                    notificationManager.notify(2, notification.build());
+                else
+                    notificationManager.cancel(2);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+
+            }
+        });
+
 
         faniv.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -189,7 +217,7 @@ public class MainActivity extends AppCompatActivity {
         };
         getRequest.setTag("requests");
         getQueue.add(getRequest);
-        new CountDownTimer(8000, 1000)
+        new CountDownTimer(10000, 1000)
         {
 
             @Override
@@ -203,7 +231,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initialize() {
-        final CountDownTimer timer=new CountDownTimer(8000, 1000) {
+        final CountDownTimer timer=new CountDownTimer(10000, 1000) {
             @Override
             public void onTick(long millisUntilFinished) {}
 
@@ -290,7 +318,7 @@ public class MainActivity extends AppCompatActivity {
         getRequest.setTag("requests");
         getQueue.add(getRequest);
 
-        new CountDownTimer(8000, 1000){
+        new CountDownTimer(10000, 1000){
 
             @Override
             public void onTick(long millisUntilFinished) {}
@@ -304,7 +332,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void fanUpdate(View v)
     {
-        final CountDownTimer timer=new CountDownTimer(5000,1000) {
+        final CountDownTimer timer=new CountDownTimer(10000,1000) {
             @Override
             public void onTick(long millisUntilFinished) {}
 
@@ -374,7 +402,7 @@ public class MainActivity extends AppCompatActivity {
         };
         getRequest.setTag("requests");
         getQueue.add(getRequest);
-        new CountDownTimer(5000,1000)
+        new CountDownTimer(10000,1000)
         {
 
             @Override
@@ -389,7 +417,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void bulbUpdate(View v)
     {
-        final CountDownTimer timer=new CountDownTimer(5000 ,1000) {
+        final CountDownTimer timer=new CountDownTimer(10000 ,1000) {
             @Override
             public void onTick(long millisUntilFinished) {}
 
@@ -458,7 +486,7 @@ public class MainActivity extends AppCompatActivity {
         };
         getRequest.setTag("requests");
         getQueue.add(getRequest);
-        new CountDownTimer(5000, 1000)
+        new CountDownTimer(10000, 1000)
         {
 
             @Override
